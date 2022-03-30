@@ -1,65 +1,87 @@
-"use strict"
+"use strict";
 
 class List {
-    
-    constructor(x){
-        this.containerClass = '.' + x;
-    }
+  constructor(x) {
+    this.containerClass = "." + x;
+  }
 
-    init = () => {
-        this.createInput();
-        this.createListBlock();
-        this.createFooterBlock();
-        this.createProgressBar();
-        this.createRemoveButton();
-    }
+  listValArray = [];
 
-    createInput = () => {
-    
-        const container = document.querySelector(this.containerClass);
-        const inputBlock = document.createElement('div');
-        inputBlock.className = 'input-block';
-        inputBlock.innerHTML = 
-            `<div class="input-block">
+  init = () => {
+    this.createInput();
+    this.createListBlock();
+    this.createFooterBlock();
+    this.createProgressBar();
+    this.appendFromLocalStorage();
+  };
+
+  createInput = () => {
+    const container = document.querySelector(this.containerClass);
+    const inputBlock = document.createElement("div");
+    inputBlock.className = "input-block";
+    inputBlock.innerHTML = `<div class="input-block">
             <input type="text" class="user-input" />
             <button class="add">Add task</button>
             </div>
         `;
+
+    container.appendChild(inputBlock);
+    const button = document.querySelector(".add");
+    button.addEventListener("click", this.addItems);
+  };
+
+  addItems = () => {
+    const input = document.querySelector(".user-input");
+
+    if (input.value.length !== 0) {
+      const listItem = this.createItem(input.value);
+      input.value = "";
+      const listBlock = document.querySelector(".list-block");
+      listBlock.appendChild(listItem);
+      this.updateListArray();
+      this.changeProgressBar();
+    } else {
+      alert("Can't be empty");
+    }
+  };
+
+  createListBlock = () => {
+    const container = document.querySelector(this.containerClass);
+    const listBlock = document.createElement("ul");
+    listBlock.className = "list-block";
+    container.appendChild(listBlock);
+  };
+
+  appendFromLocalStorage = () => {
+
+    const listBlock = document.querySelector(".list-block");
+    const storage = JSON.parse(localStorage.getItem('list-item-positions'));
+        storage.forEach(listItem => {
+          let item = this.createItem(listItem.listValue, listItem.isChecked)
+          
+          listBlock.appendChild(item);
+        })
         
-        container.appendChild(inputBlock);
-        const button = document.querySelector('.add');  
-        button.addEventListener('click', this.addItems);
-    }
+        this.changeProgressBar();
+        console.log(storage);
+  }
 
-    addItems = () => { 
+  createItem = (InputValue, isChecked) => {
+    const listItem = document.createElement("li");
+    let currentNumOfItems = this.getNumberOfListItems();
+    let id = this.getNumberOfListItems() + 1;
+    let lineThrough
+    if(isChecked) {
+        isChecked = 'checked';
+        lineThrough = 'line-through';
+    };
 
-            const input = document.querySelector('.user-input');
-
-            if(input.value.length !== 0){
-                const listItem = this.createItem(input.value);
-                input.value = '';
-                const listBlock = document.querySelector('.list-block');
-                listBlock.appendChild(listItem);
-            }else{
-                alert("Can't be empty");
-            }
-    }
-
-    createListBlock = () => {
-        const container = document.querySelector(this.containerClass);
-        const listBlock = document.createElement('ul');
-        listBlock.className = 'list-block';
-        container.appendChild(listBlock);
-    }
-
-    createItem = (InputValue) => {
-        const listItem = document.createElement('li');
-        listItem.classList = "list-item"
-        listItem.innerHTML = `
+    listItem.classList = "list-item";
+    listItem.innerHTML = `
         <div>
-            <input type="checkbox" id="to_do-1" name="to_do-1" />
-            <input type="text" id="edit-input-1" name="edit-input-1" />
-            <p class="my-list__item__text">${InputValue}</p>
+            <input type="checkbox" id="to_do-" name="to_do-1" ${isChecked}/>
+            <input type="text" class="edit-input" id="edit-input-1" name="edit-input-1" value="${InputValue}" />
+            <p class="my-list__item__text ${lineThrough}">${InputValue}</p>
             <div class="edit">
             <i>edit</i>
             </div>
@@ -69,55 +91,159 @@ class List {
         </div>
         `;
 
-        const remove = listItem.querySelector('.remove');
-        remove.addEventListener('click', (e) => {
-            e.target.parentElement.parentElement.parentElement.remove();
-        })
+    const remove = listItem.querySelector(".remove");
+    const edit = listItem.querySelector(".edit");
+    const checkbox = listItem.querySelector("input[type=checkbox]");
 
-        return listItem;
+    checkbox.addEventListener("click", (e) => {
+      this.checkedItem(e);
+      this.updateListArray();
+    });
 
-    }
+    edit.addEventListener("click", (e) => {
+      this.editListItem(e);
+      this.updateListArray();
+    });
 
-    createFooterBlock = () => {
-        const parentContainer = document.querySelector(this.containerClass);
-        const container = document.createElement('div');
-        const deleteAllButton =  document.createElement('button');
-        deleteAllButton.textContent = "Remove all"
-        deleteAllButton.className = 'remove-all';
-        container.className = 'list-footer__block';
+    remove.addEventListener("click", (e) => {
+      const listItem = e.target.parentElement.parentElement.parentElement;
+      listItem.remove();
 
-        deleteAllButton.addEventListener('click',this.removeAllCheckedItems);
+      this.updateListArray();
+      this.changeProgressBar();
+    });
 
-        container.appendChild(deleteAllButton);
-        parentContainer.appendChild(container)
-       
-    }
+    return listItem;
+  };
 
-    removeAllCheckedItems = () => {
-        const selectedItems = document.querySelectorAll('.list-block > li');
-        selectedItems.forEach(item => {
-            if(item.querySelector('input[type = "checkbox"]').checked){
-                item.remove();
-            }
-        })
-        this.updateProgressBar();
-    }
+  updateListArray = () => {
+      /// reikia dabartinis  pozicijos
+      /// reikia visu dom pozicijos
 
-    updateProgressBar = ()=> {
+    this.listValArray = [];
+    const listItems = document.querySelectorAll('.list-item');
 
-    }
+    listItems.forEach(listItem => {
 
-    createProgressBar = () => {
+        this.listValArray.push({
+            listValue: listItem.querySelector('.my-list__item__text').textContent,
+            isChecked: listItem.querySelector('input[type = "checkbox"]').checked? true: false,
+          })
+    });
 
-    }
+      this.saveToLocalStorage();
+  }
 
-    createRemoveButton = () => {
-        
-    }
+  saveToLocalStorage = () => {
+    localStorage.setItem("list-item-positions", JSON.stringify(this.listValArray));
+  }
+
+  addToValArray = (id, InputValue, IsChecked) => {
+    let position = this.getNumberOfListItems();
+    this.listValArray.push({
+      listValue: InputValue,
+      isChecked: IsChecked,
+    });
+
+    this.saveToLocalStorage();
+  };
+
+  createFooterBlock = () => {
+    const parentContainer = document.querySelector(this.containerClass);
+    const container = document.createElement("div");
+    const deleteAllButton = document.createElement("button");
+    deleteAllButton.textContent = "Remove all";
+    deleteAllButton.className = "remove-all";
+    container.className = "list-footer__block";
+
+    deleteAllButton.addEventListener("click", this.removeAllCheckedItems);
+
+    container.appendChild(deleteAllButton);
+    parentContainer.appendChild(container);
+  };
+
+  checkedItem = (e) => {
+    this.changeProgressBar();
+    const paragraph = e.target.parentElement.querySelector("p");
+    paragraph.classList.toggle("line-through");
+  };
+
+  removeAllCheckedItems = () => {
+    const selectedItems = document.querySelectorAll(".list-item");
+    selectedItems.forEach((item) => {
+      if (item.querySelector('input[type = "checkbox"]').checked) {
+        item.remove();
+      }
+    });
+    this.changeProgressBar();
+    this.updateListArray();
+  };
+
+  getNumberOfListItems = () => {
+    return document.querySelectorAll(".list-item").length;
+  };
+
+  getNumberOfCompletedListItems = () => {
+    return document.querySelectorAll(".list-item input[type=checkbox]:checked")
+      .length;
+  };
+
+  editListItem = (e) => {
+    const listItem = e.target.parentElement.parentElement.parentElement;
+
+    const text = listItem.querySelector(".my-list__item__text");
+    text.classList.add("display-none");
+
+    const editInput = listItem.querySelector(".edit-input");
+    editInput.value = text.textContent;
+    editInput.classList.add("display-block");
+
+    editInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        text.textContent = editInput.value;
+        text.classList.remove("display-none");
+        editInput.classList.remove("display-block");
+        this.updateListArray();
+      }
+    });
+  };
+
+  changeProgressBar = () => {
+    const numberOfItems = this.getNumberOfListItems();
+    const numberOfCheckedItems = this.getNumberOfCompletedListItems();
+    const progressBar = document.querySelector(".progress-bar");
+    progressBar.querySelector(".progress-bar-color").style.width =
+      ((numberOfCheckedItems / numberOfItems) * 100
+        ? (numberOfCheckedItems / numberOfItems) * 100
+        : 0) + "%";
+    progressBar.querySelector(
+      ".progress-text"
+    ).textContent = `${numberOfCheckedItems} iš ${numberOfItems} yra pabaigti.`;
+  };
+
+  createProgressBar = () => {
+    const footerContainer = document.querySelector(
+      this.containerClass + " .list-footer__block"
+    );
+    const progressBar = document.createElement("div");
+    progressBar.className = "progress-bar";
+
+    const numberOfItems = this.getNumberOfListItems();
+    const numberOfCheckedItems = this.getNumberOfCompletedListItems();
+    progressBar.style.backgroundColor;
+
+    progressBar.innerHTML = `
+        <div class="progress-bar-color" style="width:${
+          (numberOfCheckedItems / numberOfItems) * 100
+            ? (numberOfCheckedItems / numberOfItems) * 100
+            : 0
+        }%; background-color: green;height: 50px;"></div>
+        <p class="progress-text">${numberOfCheckedItems} iš ${numberOfItems} yra pabaigti.</p>
+        `;
+
+    footerContainer.appendChild(progressBar);
+  };
 }
 
-let list = new List('list'); 
+let list = new List("list");
 list.init();
-
-// let container = document.querySelector('.list');
-// console.log(container);

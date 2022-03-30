@@ -1,0 +1,15 @@
+
+.edit-input{
+    display: none;
+}
+.my-list__item__text.display-none {
+    display: none;
+}
+
+.edit-input.display-block{
+    display: block;
+}
+
+.line-through{
+    text-decoration: line-through;
+}
